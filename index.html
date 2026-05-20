@@ -1564,37 +1564,73 @@ function voegAiS(i){const s=window._aiS?.[i];if(!s)return;D.doelen.unshift({id:u
 function voegSuggestieToe(i){voegAiS(i);render();}
 
 // ══════════════════════════════════════════════════════════
-// AUTH SYSTEEM
+// SUPABASE CONFIGURATIE
 // ══════════════════════════════════════════════════════════
-
-// ── Pas hier je uitnodigingscode aan ──
+const SB_URL  = 'https://qejrnvcjtycuqrilhjrt.supabase.co';
+const SB_KEY  = 'sb_publishable_uDlqlcx6Cgy93EkyTW64aQ_EzVmdDzW';
 const UITNODIGINGSCODE = 'NIELS2026';
 
-// Gebruikers worden opgeslagen in localStorage
-function laadGebruikers() {
-  try { return JSON.parse(localStorage.getItem('nos-gebruikers')) || {}; } catch { return {}; }
-}
-function slaGebruikersOp(g) {
-  localStorage.setItem('nos-gebruikers', JSON.stringify(g));
+// Supabase REST helpers
+async function sbFetch(pad, opties={}) {
+  const res = await fetch(`${SB_URL}${pad}`, {
+    ...opties,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SB_KEY,
+      'Authorization': `Bearer ${sbToken() || SB_KEY}`,
+      ...(opties.headers || {})
+    }
+  });
+  return res;
 }
 
-function getIngelogd() {
-  return localStorage.getItem('nos-sessie') || null;
+function sbToken() { return localStorage.getItem('sb-token'); }
+function sbGebruiker() { try { return JSON.parse(localStorage.getItem('sb-user')); } catch { return null; } }
+function sbSessieOpslaan(session) {
+  localStorage.setItem('sb-token', session.access_token);
+  localStorage.setItem('sb-refresh', session.refresh_token);
+  localStorage.setItem('sb-user', JSON.stringify(session.user));
 }
-function setIngelogd(gebruikersnaam) {
-  localStorage.setItem('nos-sessie', gebruikersnaam);
+function sbSessieWissen() {
+  ['sb-token','sb-refresh','sb-user'].forEach(k => localStorage.removeItem(k));
 }
-function uitloggen() {
-  localStorage.removeItem('nos-sessie');
+
+async function uitloggen() {
+  await sbFetch('/auth/v1/logout', { method: 'POST' });
+  sbSessieWissen();
   location.reload();
 }
 
-// Data sleutel per gebruiker — zodat iedereen eigen data heeft
-function getUserSleutel(gebruiker) {
-  return `niels-os-v5-${gebruiker}`;
+// Dashboard data ophalen van Supabase
+async function laadVanServer() {
+  const user = sbGebruiker();
+  if (!user) return null;
+  const res = await sbFetch(`/rest/v1/dashboard_data?user_id=eq.${user.id}&select=data`);
+  if (!res.ok) return null;
+  const json = await res.json();
+  return json[0]?.data || null;
 }
 
-// ── Login scherm HTML ──
+// Dashboard data opslaan naar Supabase
+async function slaanOpServer(data) {
+  const user = sbGebruiker();
+  if (!user) return;
+  await sbFetch('/rest/v1/dashboard_data', {
+    method: 'POST',
+    headers: { 'Prefer': 'resolution=merge-duplicates' },
+    body: JSON.stringify({ user_id: user.id, data, bijgewerkt_op: new Date().toISOString() })
+  });
+}
+
+// Opslaan = lokaal + server
+function opslaan() {
+  localStorage.setItem('nos-draft', JSON.stringify(D));
+  slaanOpServer(D);
+  herbereken();
+  renderSB();
+}
+
+// ── Login scherm ──
 function toonLoginScherm() {
   document.body.innerHTML = `
   <style>
@@ -1612,109 +1648,132 @@ function toonLoginScherm() {
     .veld:focus{border-color:#2d5be3;}
     .login-btn{width:100%;margin-top:20px;padding:12px;border-radius:10px;border:none;background:#1a1814;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:opacity .15s;}
     .login-btn:hover{opacity:.85;}
+    .login-btn:disabled{opacity:.5;cursor:not-allowed;}
     .fout{color:#c0392b;font-size:13px;text-align:center;margin-top:12px;min-height:20px;}
     .info{color:#6b6760;font-size:12px;text-align:center;margin-top:16px;line-height:1.6;}
-    [data-thema="donker"] body{background:#0e0f11;}
   </style>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
   <div class="login-wrap">
     <div class="login-logo">N</div>
     <div class="login-titel">Persoonlijk Dashboard</div>
     <div class="login-sub">Jouw eigen leven. Overzichtelijk en in controle.</div>
-
     <div class="tab-wrap">
       <button class="tab act" id="tab-in" onclick="wisselTab('inloggen')">Inloggen</button>
       <button class="tab" id="tab-reg" onclick="wisselTab('registreren')">Account aanmaken</button>
     </div>
-
-    <!-- Inloggen -->
     <div id="scherm-inloggen">
-      <label class="veld-label">Gebruikersnaam</label>
-      <input class="veld" id="in-gebruiker" placeholder="jouwgebruikersnaam" autocomplete="username">
+      <label class="veld-label">E-mailadres</label>
+      <input class="veld" id="in-email" type="email" placeholder="jouw@email.nl" autocomplete="email">
       <label class="veld-label">Wachtwoord</label>
       <input class="veld" id="in-wachtwoord" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
-      <button class="login-btn" onclick="login()">Inloggen →</button>
+      <button class="login-btn" id="in-btn" onclick="login()">Inloggen →</button>
       <div class="fout" id="in-fout"></div>
     </div>
-
-    <!-- Registreren -->
     <div id="scherm-registreren" style="display:none">
       <label class="veld-label">Uitnodigingscode</label>
       <input class="veld" id="reg-code" placeholder="" style="letter-spacing:.1em;text-transform:uppercase">
-      <label class="veld-label">Gebruikersnaam</label>
-      <input class="veld" id="reg-gebruiker" placeholder="Kies een gebruikersnaam">
       <label class="veld-label">Jouw naam</label>
       <input class="veld" id="reg-naam" placeholder="Bijv. Laura">
+      <label class="veld-label">E-mailadres</label>
+      <input class="veld" id="reg-email" type="email" placeholder="jouw@email.nl" autocomplete="email">
       <label class="veld-label">Wachtwoord</label>
-      <input class="veld" id="reg-wachtwoord" type="password" placeholder="Kies een wachtwoord (min. 6 tekens)" autocomplete="new-password" onkeydown="if(event.key==='Enter')registreer()">
-      <button class="login-btn" onclick="registreer()">Account aanmaken →</button>
+      <input class="veld" id="reg-wachtwoord" type="password" placeholder="Minimaal 6 tekens" autocomplete="new-password" onkeydown="if(event.key==='Enter')registreer()">
+      <button class="login-btn" id="reg-btn" onclick="registreer()">Account aanmaken →</button>
       <div class="fout" id="reg-fout"></div>
       <div class="info">Je hebt een uitnodigingscode nodig.<br>Vraag deze op bij Niels.</div>
     </div>
   </div>`;
 
   window.wisselTab = function(tab) {
-    document.getElementById('scherm-inloggen').style.display = tab === 'inloggen' ? 'block' : 'none';
-    document.getElementById('scherm-registreren').style.display = tab === 'registreren' ? 'block' : 'none';
-    document.getElementById('tab-in').className = 'tab' + (tab === 'inloggen' ? ' act' : '');
-    document.getElementById('tab-reg').className = 'tab' + (tab === 'registreren' ? ' act' : '');
+    document.getElementById('scherm-inloggen').style.display    = tab==='inloggen'    ? 'block':'none';
+    document.getElementById('scherm-registreren').style.display = tab==='registreren' ? 'block':'none';
+    document.getElementById('tab-in').className  = 'tab'+(tab==='inloggen'?    ' act':'');
+    document.getElementById('tab-reg').className = 'tab'+(tab==='registreren'? ' act':'');
   };
 
-  window.login = function() {
-    const gebruiker = document.getElementById('in-gebruiker').value.trim().toLowerCase();
-    const wachtwoord = document.getElementById('in-wachtwoord').value;
-    const fout = document.getElementById('in-fout');
-    const gebruikers = laadGebruikers();
-    if (!gebruikers[gebruiker]) { fout.textContent = 'Gebruikersnaam niet gevonden.'; return; }
-    if (gebruikers[gebruiker].wachtwoord !== btoa(wachtwoord)) { fout.textContent = 'Wachtwoord klopt niet.'; return; }
-    setIngelogd(gebruiker);
-    location.reload();
+  window.login = async function() {
+    const email = document.getElementById('in-email').value.trim();
+    const ww    = document.getElementById('in-wachtwoord').value;
+    const fout  = document.getElementById('in-fout');
+    const btn   = document.getElementById('in-btn');
+    fout.textContent = ''; btn.disabled = true; btn.textContent = 'Bezig…';
+    try {
+      const res = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'apikey': SB_KEY },
+        body: JSON.stringify({ email, password: ww })
+      });
+      const data = await res.json();
+      if (!res.ok) { fout.textContent = 'E-mail of wachtwoord klopt niet.'; return; }
+      sbSessieOpslaan(data);
+      location.reload();
+    } catch { fout.textContent = 'Verbindingsfout — probeer opnieuw.'; }
+    finally { btn.disabled=false; btn.textContent='Inloggen →'; }
   };
 
-  window.registreer = function() {
-    const code = document.getElementById('reg-code').value.trim().toUpperCase();
-    const gebruiker = document.getElementById('reg-gebruiker').value.trim().toLowerCase().replace(/\s/g,'');
-    const naam = document.getElementById('reg-naam').value.trim();
-    const wachtwoord = document.getElementById('reg-wachtwoord').value;
-    const fout = document.getElementById('reg-fout');
+  window.registreer = async function() {
+    const code  = document.getElementById('reg-code').value.trim().toUpperCase();
+    const naam  = document.getElementById('reg-naam').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    const ww    = document.getElementById('reg-wachtwoord').value;
+    const fout  = document.getElementById('reg-fout');
+    const btn   = document.getElementById('reg-btn');
     fout.textContent = '';
     if (code !== UITNODIGINGSCODE) { fout.textContent = 'Uitnodigingscode klopt niet.'; return; }
-    if (!gebruiker || gebruiker.length < 3) { fout.textContent = 'Gebruikersnaam moet minimaal 3 tekens zijn.'; return; }
-    if (!naam) { fout.textContent = 'Vul je naam in.'; return; }
-    if (wachtwoord.length < 6) { fout.textContent = 'Wachtwoord moet minimaal 6 tekens zijn.'; return; }
-    const gebruikers = laadGebruikers();
-    if (gebruikers[gebruiker]) { fout.textContent = 'Deze gebruikersnaam is al bezet.'; return; }
-    gebruikers[gebruiker] = { wachtwoord: btoa(wachtwoord), naam };
-    slaGebruikersOp(gebruikers);
-    setIngelogd(gebruiker);
-    location.reload();
+    if (!naam)                     { fout.textContent = 'Vul je naam in.'; return; }
+    if (!email)                    { fout.textContent = 'Vul je e-mailadres in.'; return; }
+    if (ww.length < 6)             { fout.textContent = 'Wachtwoord minimaal 6 tekens.'; return; }
+    btn.disabled=true; btn.textContent='Bezig…';
+    try {
+      const res = await fetch(`${SB_URL}/auth/v1/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'apikey': SB_KEY },
+        body: JSON.stringify({ email, password: ww, data: { naam } })
+      });
+      const data = await res.json();
+      if (!res.ok) { fout.textContent = data.msg || 'Registratie mislukt.'; return; }
+      if (data.session) {
+        sbSessieOpslaan(data.session);
+        location.reload();
+      } else {
+        fout.style.color='#1a7f4b';
+        fout.textContent = '✓ Account aangemaakt! Check je e-mail om te bevestigen, dan kan je inloggen.';
+      }
+    } catch { fout.textContent = 'Verbindingsfout — probeer opnieuw.'; }
+    finally { btn.disabled=false; btn.textContent='Account aanmaken →'; }
   };
 }
 
 // ══════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════
-// Controleer of ingelogd
-const _sessie = getIngelogd();
-if (!_sessie) {
+const _user = sbGebruiker();
+const _token = sbToken();
+
+if (!_user || !_token) {
   toonLoginScherm();
 } else {
-  // Laad naam uit gebruikersprofiel
-  const _gebruikers = laadGebruikers();
-  const _profiel = _gebruikers[_sessie];
+  // Laad eerst lokale draft, dan server data
+  const _draft = localStorage.getItem('nos-draft');
+  D = _draft ? JSON.parse(_draft) : basis();
 
-  // Overschrijf de data sleutel met gebruiker-specifieke sleutel
-  const SK_OVERRIDE = getUserSleutel(_sessie);
-  function laad() { try { return JSON.parse(localStorage.getItem(SK_OVERRIDE)) || basis(); } catch { return basis(); } }
-  function opslaan() { localStorage.setItem(SK_OVERRIDE, JSON.stringify(D)); herbereken(); renderSB(); }
+  // Naam uit Supabase profiel
+  const _meta = _user.user_metadata;
+  if (_meta?.naam && D.naam === 'Niels') D.naam = _meta.naam;
 
-  // Zet naam op profielnaam als eerste keer
-  D = laad();
-  if (_profiel && D.naam === 'Niels' && _profiel.naam !== 'Niels') {
-    D.naam = _profiel.naam;
-  }
+  // Server data ophalen en samenvoegen
+  laadVanServer().then(serverData => {
+    if (serverData) {
+      D = serverData;
+      if (_meta?.naam && D.naam === 'Niels') D.naam = _meta.naam;
+      localStorage.setItem('nos-draft', JSON.stringify(D));
+    }
+    herbereken();
+    renderSB();
+    render();
+  });
 
-  // Voeg uitlogknop toe aan sidebar footer
+  // Uitlogknop toevoegen aan sidebar
   const _origRenderSB = renderSB;
   renderSB = function() {
     _origRenderSB();
@@ -1724,7 +1783,7 @@ if (!_sessie) {
       btn.id = 'uitlog-btn';
       btn.className = 'btn btn-o btn-sm';
       btn.style.cssText = 'width:100%;margin-top:12px;font-size:11px;';
-      btn.textContent = `↩ Uitloggen (${_sessie})`;
+      btn.textContent = `↩ Uitloggen (${_user.email})`;
       btn.onclick = uitloggen;
       sf.appendChild(btn);
     }
@@ -1734,6 +1793,8 @@ if (!_sessie) {
   renderSB();
   render();
 }
+
+
 </script>
 </body>
 </html>
