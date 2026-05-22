@@ -2,7 +2,7 @@
 <html lang="nl" data-thema="licht">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Mijn Dashboard">
 <meta name="theme-color" content="#f7f6f3">
@@ -48,7 +48,7 @@ input:focus,textarea:focus,select:focus{border-color:var(--accent);}
 select{cursor:pointer;} textarea{resize:vertical;} button{cursor:pointer;border:none;background:none;}
 .app{display:flex;height:100vh;overflow:hidden;}
 .sidebar{width:var(--sidebar);flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;height:100vh;position:sticky;top:0;z-index:50;}
-.main{flex:1;overflow-y:auto;}
+.main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .page{max-width:980px;margin:0 auto;padding:40px 36px 60px;}
 .sb-logo{padding:22px 18px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);}
 .sb-mark{width:36px;height:36px;border-radius:10px;background:var(--text);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--bg);flex-shrink:0;font-family:var(--display);}
@@ -194,7 +194,26 @@ nav{flex:1;padding:8px 10px;display:flex;flex-direction:column;gap:1px;overflow-
 .f3a{animation:opDan .35s .12s ease both;} .f4a{animation:opDan .35s .18s ease both;}
 @media(max-width:900px){.week-grid{grid-template-columns:repeat(4,1fr);}.g4{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:700px){.sidebar{display:none;}.bottom-bar{display:block;}.main{padding-bottom:80px;}.page{padding:20px 16px 80px;}.g3,.g2{grid-template-columns:1fr;}.week-grid{grid-template-columns:repeat(3,1fr);}}
+
+@media(max-width:700px){
+  .bb-item{flex:1;padding:6px 2px;min-height:52px;justify-content:center;}
+  .page{padding:16px 12px 90px;}
+  .g2{grid-template-columns:1fr;}
+  .ga{grid-template-columns:1fr 1fr;}
+  .week-grid{grid-template-columns:repeat(2,1fr);}
+  .modal{padding:20px;border-radius:14px;}
+  input,textarea,select{font-size:16px;}
+}
+
 @media(max-width:480px){.g4,.ga{grid-template-columns:1fr 1fr;}.week-grid{grid-template-columns:1fr 1fr;}}
+
+.dag-slot{touch-action:manipulation;}
+.btn{touch-action:manipulation;}
+.ni{touch-action:manipulation;}
+.bb-item{touch-action:manipulation;min-width:44px;min-height:44px;}
+.gw-check{touch-action:manipulation;min-width:44px;min-height:44px;}
+.stemming-opt{touch-action:manipulation;}
+.energie-opt{touch-action:manipulation;}
 </style>
 </head>
 <body>
@@ -211,7 +230,7 @@ nav{flex:1;padding:8px 10px;display:flex;flex-direction:column;gap:1px;overflow-
     </div>
     <div class="sb-modi">
       <button class="sb-modus-btn act" id="modus-dag-btn" onclick="zetModus('dag')">☀️ Dagelijks</button>
-      <button class="sb-modus-btn" id="modus-os-btn" onclick="zetModus('os')">⚡ Life OS</button>
+      <button class="sb-modus-btn" id="modus-os-btn" onclick="zetModus('os')">⚡ Doelen & Planning</button>
     </div>
     <nav id="sb-nav"></nav>
     <div class="sb-footer">
@@ -242,7 +261,7 @@ async function laadVanServer(){const u=sbUser();if(!u)return null;const r=await 
 async function slaOpServer(data){const u=sbUser();if(!u)return;await sbFetch('/rest/v1/dashboard_data',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates'},body:JSON.stringify({user_id:u.id,data,bijgewerkt_op:new Date().toISOString()})});}
 
 // DATA BASIS
-function basis(){return {naam:'',thema:'licht',onboardingKlaar:false,doelen:[],doelCats:['Zakelijk','Persoonlijk','Financieel','Fitness','Groei','Reizen','Relaties'],gewoontes:[],gewoonteGroepen:['Ochtend','Avond','Overig'],vermogen:{nettoWaarde:0,spaardoel:0,spaargeld:0,stromen:[]},prioriteiten:['','',''],intentie:'',intentieDatum:'',overwinningen:[],dagboek:[],angstLog:[],beslissingLog:[],energieLekken:[],kalender:{},weekTaken:{ma:[],di:[],wo:[],do:[],vr:[],za:[],zo:[]},weekDoelen:[],terugkerendeTaken:[],contacten:[],verjaardagen:[],skills:[],boeken:[],wheelScores:{Zakelijk:5,Financieel:5,Gezondheid:5,Relaties:5,Groei:5,Plezier:5,Omgeving:5,Mindset:5},dagData:{},badges:[],xp:0,pomoDuur:25,urenCats:['Werk','Vrij','Sport','Overig'],};}
+function basis(){return {naam:'',thema:'licht',onboardingKlaar:false,doelen:[],doelCats:['Zakelijk','Persoonlijk','Financieel','Fitness','Groei','Reizen','Relaties'],gewoontes:[],gewoonteGroepen:['Ochtend','Avond','Overig'],vermogen:{nettoWaarde:0,spaardoel:0,spaargeld:0,stromen:[]},prioriteiten:['','',''],intentie:'',intentieDatum:'',overwinningen:[],dagboek:[],angstLog:[],beslissingLog:[],energieLekken:[],kalender:{},weekTaken:{ma:[],di:[],wo:[],do:[],vr:[],za:[],zo:[]},weekDoelen:[],terugkerendeTaken:[],contacten:[],verjaardagen:[],skills:[],boeken:[],wheelScores:{Zakelijk:5,Financieel:5,Gezondheid:5,Relaties:5,Groei:5,Plezier:5,Omgeving:5,Mindset:5},dagData:{},badges:[],xp:0,pomoDuur:25,urenCats:['Werk','Vrij','Sport','Overig'],googleCalUrl:'https://calendar.google.com/calendar/embed?src=nielshaarlem023%40hotmail.nl&src=u74og91kc200cpl7g691k3kbc8%40group.calendar.google.com&src=ecoulrf55pglhakkj3isc48dpe4ufpfv%40import.calendar.google.com&src=nl.dutch%23holiday%40group.v.calendar.google.com&ctz=Europe%2FAmsterdam&wkst=2&bgcolor=%23ffffff&showTitle=0&showNav=1&showDate=1&showPrint=0&showTabs=1&showCalendars=1&hl=nl&mode=WEEK',};}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 function vdg(){return new Date().toISOString().split('T')[0];}
 function dfmt(d){return new Date(d).toLocaleDateString('nl-NL',{day:'numeric',month:'short'});}
@@ -267,8 +286,8 @@ function herbereken(){const beh=D.doelen.filter(d=>d.status==='behaald').length,
 function wisselThema(){const nt=document.documentElement.getAttribute('data-thema')==='licht'?'donker':'licht';document.documentElement.setAttribute('data-thema',nt);localStorage.setItem('thema',nt);D.thema=nt;opslaan();const tl=document.getElementById('thema-lbl');if(tl)tl.textContent=nt==='donker'?'🌙 Donker thema':'☀️ Licht thema';}
 
 // NAV & RENDER SETUP
-const DAG_NAV=[{id:'thuis',ic:'⌂',lbl:'Vandaag'},{id:'gewoontes',ic:'∞',lbl:'Gewoontes'},{id:'agenda',ic:'📅',lbl:'Agenda'},{id:'gezondheid',ic:'💚',lbl:'Gezondheid'},{id:'relaties',ic:'👥',lbl:'Relaties'}];
-const OS_NAV=[{id:'doelen',ic:'◎',lbl:'Doelen'},{id:'week',ic:'📋',lbl:'Week OS'},{id:'vermogen',ic:'◈',lbl:'Vermogen'},{id:'groei',ic:'↑',lbl:'Groei'},{id:'mindset',ic:'🧠',lbl:'Mindset'},{id:'dagboek',ic:'✦',lbl:'Dagboek'}];
+const DAG_NAV=[{id:'thuis',ic:'⌂',lbl:'Vandaag'},{id:'gewoontes',ic:'∞',lbl:'Gewoontes'},{id:'agenda',ic:'📅',lbl:'Agenda'},{id:'gezondheid',ic:'💚',lbl:'Gezondheid'}];
+const OS_NAV=[{id:'doelen',ic:'◎',lbl:'Doelen'},{id:'week',ic:'📋',lbl:'Week'},{id:'vermogen',ic:'◈',lbl:'Vermogen'},{id:'groei',ic:'↑',lbl:'Groei'},{id:'mindset',ic:'🧠',lbl:'Mindset'},{id:'dagboek',ic:'✦',lbl:'Dagboek'}];
 function zetModus(m){modus=m;document.getElementById('modus-dag-btn').className='sb-modus-btn'+(m==='dag'?' act':'');document.getElementById('modus-os-btn').className='sb-modus-btn'+(m==='os'?' act':'');hNav=m==='dag'?'thuis':'doelen';renderSB();render();}
 function renderSB(){
   const dd=document.getElementById('sb-datum');
@@ -280,7 +299,7 @@ function renderSB(){
   if(bb)bb.innerHTML=nav.slice(0,5).map(x=>'<button class="bb-item'+(x.id===hNav?' act':'')+'" onclick="nav(&quot;'+x.id+'&quot;)"><span style="font-size:18px">'+x.ic+'</span><span>'+x.lbl+'</span></button>').join('');
 }
 function nav(id){hNav=id;renderSB();render();document.getElementById('inhoud').scrollTop=0;}
-function render(){const el=document.getElementById('inhoud');switch(hNav){case 'thuis':el.innerHTML=pgThuis();break;case 'gewoontes':el.innerHTML=pgGewoontes();break;case 'agenda':el.innerHTML=pgAgenda();break;case 'gezondheid':el.innerHTML=pgGezondheid();break;case 'relaties':el.innerHTML=pgRelaties();break;case 'doelen':el.innerHTML=pgDoelen();break;case 'week':el.innerHTML=pgWeek();break;case 'vermogen':el.innerHTML=pgVermogen();break;case 'groei':el.innerHTML=pgGroei();break;case 'mindset':el.innerHTML=pgMindset();break;case 'dagboek':el.innerHTML=pgDagboek();break;}}
+function render(){const el=document.getElementById('inhoud');switch(hNav){case 'thuis':el.innerHTML=pgThuis();break;case 'gewoontes':el.innerHTML=pgGewoontes();break;case 'agenda':el.innerHTML=pgAgenda();break;case 'gezondheid':el.innerHTML=pgGezondheid();break;case 'relaties':el.innerHTML=pgThuis();break;case 'doelen':el.innerHTML=pgDoelen();break;case 'week':el.innerHTML=pgWeek();break;case 'vermogen':el.innerHTML=pgVermogen();break;case 'groei':el.innerHTML=pgGroei();break;case 'mindset':el.innerHTML=pgMindset();break;case 'dagboek':el.innerHTML=pgDagboek();break;}}
 // HELPERS
 function ring(pct,size,stroke,kleur){const r=(size-stroke*2)/2,circ=2*Math.PI*r,dash=(Math.min(100,pct)/100)*circ;return '<div class="ring-w" style="width:'+size+'px;height:'+size+'px"><svg width="'+size+'" height="'+size+'" style="transform:rotate(-90deg)"><circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="var(--bg4)" stroke-width="'+stroke+'"/><circle cx="'+(size/2)+'" cy="'+(size/2)+'" r="'+r+'" fill="none" stroke="'+kleur+'" stroke-width="'+stroke+'" stroke-dasharray="'+dash+' '+circ+'" stroke-linecap="round" style="transition:stroke-dasharray .8s"/></svg><div class="ring-l" style="color:'+kleur+';font-size:'+(size>55?11:9)+'px">'+Math.round(pct)+'%</div></div>';}
 function toonMelding(t){const el=document.getElementById('toast');el.textContent=t;el.classList.remove('verborgen');clearTimeout(window._tt);window._tt=setTimeout(()=>el.classList.add('verborgen'),2500);}
@@ -453,6 +472,29 @@ function zetKal(k){const h=D.kalender[k];D.kalender[k]=h==='goed'?'slecht':h==='
 function markeerDag(){const {pct,score}=bereken_dag_score();opslaan();openModaal(`<div class="modal-t">Dag beoordeeld</div><div style="text-align:center;padding:20px 0"><div style="font-size:48px;margin-bottom:12px">${score==='goed'?'😊':'😔'}</div><div style="font-size:20px;font-weight:700;color:${score==='goed'?'var(--green)':'var(--red)'};margin-bottom:8px">${score==='goed'?'Goede dag! 🟢':'Slechte dag 🔴'}</div><div style="font-size:14px;color:var(--text2);margin-bottom:6px">${pct}% gewoontes (${D.gewoontes.filter(g=>g.vandaag).length}/${D.gewoontes.length})</div><div style="font-size:12px;color:var(--text3)">Drempel: 70% of meer = goede dag</div></div><div style="height:1px;background:var(--border);margin:16px 0"></div>${D.gewoontes.map(g=>`<div class="f ai g8" style="padding:5px 0"><span>${g.vandaag?'✅':'⬜'}</span><span style="font-size:13px;color:${g.vandaag?'var(--text)':'var(--text3)'}">${g.naam}</span></div>`).join('')}<button class="btn btn-p" style="width:100%;margin-top:16px" onclick="sluitModaal();render()">Sluiten</button>`);}
 function exporteerData(){const blob=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='dashboard-backup-'+vdg()+'.json';a.click();toonMelding('Backup gedownload ✓');}
 function checkBadges(){if(!D.badges)D.badges=[];D.gewoontes.forEach(g=>{[[7,'🏅','7 dagen'],[30,'🏆','30 dagen'],[100,'🌟','100 dagen']].forEach(([n,em,lbl])=>{const k='reeks-'+n+'-'+g.id;if(g.reeks>=n&&!D.badges.includes(k)){D.badges.push(k);toonMelding(em+' Badge: '+lbl+' '+g.naam+'!');}});});if(D.doelen.filter(d=>d.status==='behaald').length>=1&&!D.badges.includes('eerste-doel')){D.badges.push('eerste-doel');toonMelding('🎉 Badge: Eerste doel behaald!');}}
+
+
+// GOOGLE AGENDA
+function bewerkGoogleCal(){
+  openModaal(`<div class="modal-t">Google Agenda koppelen</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">Zo krijg je de embed link:</p>
+    <ol style="font-size:13px;color:var(--text2);line-height:2;padding-left:20px;margin-bottom:16px">
+      <li>Ga naar <strong>calendar.google.com</strong></li>
+      <li>Klik op het tandwiel → Instellingen</li>
+      <li>Klik op jouw agenda naam links</li>
+      <li>Scroll naar "Agenda integreren"</li>
+      <li>Kopieer de URL uit het embed iframe</li>
+    </ol>
+    <label class="m-lbl" style="margin-top:0">Plak hier de embed URL (begint met https://calendar.google.com/calendar/embed?...)</label>
+    <input id="gcal-url" placeholder="https://calendar.google.com/calendar/embed?src=..." value="${D.googleCalUrl||''}">
+    <div class="f g8 mt16">
+      <button class="btn btn-p" onclick="slaaGCalOp()">Opslaan</button>
+      <button class="btn btn-o" onclick="sluitModaal()">Annuleren</button>
+      ${D.googleCalUrl?'<button class="btn btn-r btn-sm" onclick="verwijderGCal()">Verwijderen</button>':''}
+    </div>`);
+}
+function slaaGCalOp(){const v=document.getElementById('gcal-url').value.trim();if(!v)return;D.googleCalUrl=v;opslaan();sluitModaal();toonMelding('Google Agenda gekoppeld ✓');render();}
+function verwijderGCal(){delete D.googleCalUrl;opslaan();sluitModaal();toonMelding('Google Agenda losgekoppeld');render();}
 
 // SUGGESTIES
 const SUGGESTIES=[
@@ -636,7 +678,17 @@ function pgAgenda(){
     </div>
     <div class="card p20 f4a mt8">
       <div class="stitel mb14">Terugkerende taken</div>
-      ${(D.terugkerendeTaken||[]).length?D.terugkerendeTaken.map((tt,i)=>`<div class="f ai g12" style="padding:8px 0;border-bottom:1px solid var(--border)"><div class="dag-slot ${tt.type}" style="flex:1;margin:0;cursor:default"><div class="slot-tijd">${tt.tijd||''} · ${tt.dagen.join(', ')}</div><div class="slot-tekst">${tt.tekst}</div></div><button class="del" onclick="verwijderTerugkerend(${i})">×</button></div>`).join(''):'<p style="font-size:13px;color:var(--text3)">Klik \'↻ Terugkerend\' om terugkerende taken toe te voegen</p>'}
+      ${(D.terugkerendeTaken||[]).length?D.terugkerendeTaken.map((tt,i)=>`<div class="f ai g12" style="padding:8px 0;border-bottom:1px solid var(--border)"><div class="dag-slot ${tt.type}" style="flex:1;margin:0;cursor:default"><div class="slot-tijd">${tt.tijd||''} · ${tt.dagen.join(', ')}</div><div class="slot-tekst">${tt.tekst}</div></div><button class="del" onclick="verwijderTerugkerend(${i})">×</button></div>`).join(''):'<div style="background:var(--accent2);border-radius:12px;padding:16px;text-align:center;margin-top:8px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">Nog geen terugkerende taken</div><div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6">Voeg taken toe die automatisch terugkomen — bijv. date night elke dinsdag.</div><button class=\"btn btn-p btn-sm\" onclick=\"openTerugkerendeTaak()\">+ Toevoegen</button></div>'}
+
+    <div class="card p20 mt16">
+      <div class="f jb ai mb14">
+        <div class="stitel">Google Agenda</div>
+        <button class="btn btn-o btn-xs" onclick="bewerkGoogleCal()">✎ Instellen</button>
+      </div>
+      ${D.googleCalUrl
+        ? '<iframe src="'+D.googleCalUrl+'" style="border:0;width:100%;height:360px;border-radius:10px" frameborder="0"></iframe>'
+        : '<div style="background:var(--bg3);border-radius:12px;padding:24px;text-align:center"><div style="font-size:28px;margin-bottom:8px">📅</div><div style="font-size:13px;font-weight:600;margin-bottom:6px">Google Agenda koppelen</div><div style="font-size:12px;color:var(--text2);margin-bottom:12px;line-height:1.6">Koppel je Google Agenda voor een live overzicht van al je afspraken en verjaardagen.</div><button class="btn btn-p btn-sm" onclick="bewerkGoogleCal()">Koppelen →</button></div>'
+      }
     </div>
   </div>`;}
 
